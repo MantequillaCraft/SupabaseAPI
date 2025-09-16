@@ -1,7 +1,7 @@
 import jwt
 import os
 from dotenv import load_dotenv
-from .setup import supabase
+from src.utils.setup import supabase
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
@@ -23,6 +23,6 @@ def authentication(auth_token: str):
             .execute()
         )
 
-        return user.data[0], decoded
+        return user.data[0], decoded #user.data[0] = data del usuario, decoded = payload decoded
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Something went wrong: {e}")

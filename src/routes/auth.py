@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Header
 from fastapi.responses import JSONResponse
-from schemas import request_schemas
-from utils import setup, general
+from src.schemas import request_schemas
+from src.utils import setup, general
 from datetime import datetime, timedelta, timezone
 
 
@@ -68,7 +68,7 @@ async def acces_token(
             "exp": int((datetime.now(timezone.utc) + timedelta(hours=24)).timestamp()),  # expira en 1h
         }
 
-        encoder_jwt = general.encode_user(payload)
+        encoder_jwt = general.enconde(payload)
 
         return JSONResponse({
             "auth_token" : encoder_jwt,

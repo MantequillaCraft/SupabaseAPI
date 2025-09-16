@@ -1,50 +1,67 @@
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Header
 from fastapi.responses import JSONResponse
-from utils import general, setup
-
+from src.utils import general, setup
 
 router = APIRouter()
 
 
-@router.get("/get_class")
-async def get_class(
+@router.get("/get_assignment")
+async def get_assignment(
     class_id:str= Query(...)
 ):
-    supabase = setup.supabase
-    clases = (
-        supabase.table("assignments")
-        .select("*")
-        .eq("id", class_id)
-        .execute()
-    )
-    return JSONResponse(clases)
+    try:
+        supabase = setup.supabase
+        clases = (
+            supabase.table("assignments")
+            .select("*")
+            .eq("id", class_id)
+            .execute()
+        )
+        return JSONResponse(clases.data[0])
+    except Exception as e:
+        return JSONResponse (
+            content={"error" : str(e)},
+            status_code=500
+        )
 
-@router.get("/get_classes")
-async def get_all_classes():
+
+@router.get("/get_assignments")
+async def get_all_assignments():
     try:
         supabase = setup.supabase
         clases = supabase.table("assignments").select("*").execute()
         
         return JSONResponse(clases.data)
     except Exception as e:
-        return ( e )
-    
+        return JSONResponse (
+            content={"error" : str(e)},
+            status_code=500
+        )
 
-@router.get("/add")
-async def add_class(
-    class_title:str= Query(...)
+
+@router.get("/add_assignment")
+async def add_assignment(
+    auth_token:str = Header(...),
+    assignment_title:str= Query(...)
 ):
+    general.authentication(auth_token=auth_token)
+
     try:
         supabase = setup.supabase
         clases = (
             supabase.table("assignments")
             .insert({
-                "title" : class_title
+                "title" : assignment_title
             })
             .execute()
         )
-        return JSONResponse(clases)
-    except Exception as e:
-        return JSONResponse ({
-            "error" : f"Something went wrong {e}"
+
+        return JSONResponse({
+            "message" : "Assignmente create Succesfully ",
+            "assignment_id" : clases.data[0]["id"]
         })
+    except Exception as e:
+        return JSONResponse (
+            content={"error" : str(e)},
+            status_code=500
+        )
