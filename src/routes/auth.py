@@ -2,12 +2,8 @@ from fastapi import APIRouter, HTTPException, Header
 from fastapi.responses import JSONResponse
 from schemas import request_schemas
 from utils import setup, general
-import jwt
 from datetime import datetime, timedelta, timezone
-import os 
-from dotenv import load_dotenv
 
-load_dotenv()
 
 router = APIRouter()
 
@@ -22,13 +18,12 @@ async def sign_up( req : request_schemas.SignUpRequest):
             }
         )
         user_id = auth.user.id
-        print(user_id)
 
         response = (
-            supabase.table("profiles")
+            supabase.table("users")
             .insert(
                 {
-                    "id": user_id,
+                    "id" : user_id,
                     "email" : req.email,
                     "name" : req.name
                 }
@@ -44,10 +39,7 @@ async def sign_up( req : request_schemas.SignUpRequest):
             }
         })
     except Exception as e:
-        return JSONResponse(
-            {"mesage" : f"Something went wrong : {e}"},
-            status_code=500
-        )
+        return ( e )
 
 
 @router.get("/get_token")
@@ -57,7 +49,7 @@ async def acces_token(
     try:
         supabase = setup.supabase
         response = (
-            supabase.table("profiles")
+            supabase.table("users")
             .select("*")
             .eq("id", user_id)
             .execute()
@@ -76,7 +68,7 @@ async def acces_token(
             "exp": int((datetime.now(timezone.utc) + timedelta(hours=24)).timestamp()),  # expira en 1h
         }
 
-        encoder_jwt = jwt.encode( payload=payload, key=os.getenv("SECRET"), algorithm=os.getenv("ALGORITHM") )
+        encoder_jwt = general.encode_user(payload)
 
         return JSONResponse({
             "auth_token" : encoder_jwt,

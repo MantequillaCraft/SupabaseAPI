@@ -7,13 +7,16 @@ from fastapi.responses import JSONResponse
 
 load_dotenv()
 
+def enconde(payload: dict):
+    return jwt.encode( payload=payload, key=os.getenv("SECRET"), algorithm=os.getenv("ALGORITHM") )
+
 
 def authentication(auth_token: str):
     try:
         decoded = jwt.decode(auth_token, key=os.getenv("SECRET"), algorithms=os.getenv("ALGORITHM"))
 
         user = (
-            supabase.table("profiles")
+            supabase.table("users")
             .select("*")
             .eq("id", decoded["id"])
             .eq("email", decoded["email"])

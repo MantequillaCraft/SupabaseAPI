@@ -16,5 +16,7 @@ async def root():
 
 
 from routes.auth import router as auth_router
+from routes.assignments import router as assignments_router
 
-app.include_router(auth_router, prefix="/auth",tags=["Authenticate"])
+app.include_router(auth_router, prefix="/auth", tags=["Authenticate"])
+app.include_router(assignments_router, prefix="/class", tags=["Class"])
