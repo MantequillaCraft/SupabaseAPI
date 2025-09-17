@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Query, HTTPException, Header
+from fastapi import APIRouter, Query, HTTPException, Header, Body
 from fastapi.responses import JSONResponse
+from src.schemas import request_schemas
 from src.utils import general, setup
 
 router = APIRouter()
@@ -25,13 +26,41 @@ async def get_assignment(
         )
 
 
-@router.get("/get_assignments")
-async def get_all_assignments():
+@router.post("/get_assignments")
+async def get_assignments(
+    req_body : request_schemas.AssignmentsFilters,
+    page: int = Query(default=1, ge=1),
+    pagination : int = Query(default=50, ge=1)
+):
     try:
         supabase = setup.supabase
-        assignments = supabase.table("assignments").select("*", count="exact").execute()
+        query = supabase.table("assignments").select("*", count="exact")
 
-        return JSONResponse({ "data" : { "total" : assignments.count },"something":assignments.data})
+        if req_body.status:
+            query = query.eq("status", req_body.status)
+
+        if req_body.createdAtMin:
+            query = query.gte("created_at", req_body.createdAtMin)
+
+        if req_body.createdAtMax:
+            query = query.lte("created_at", req_body.createdAtMax)
+
+        start = (page - 1) * pagination
+        end = start + pagination - 1
+
+        query = query.range(start, end)
+
+        result = query.execute()
+
+        total_pages = (result.count + pagination - 1) // pagination
+
+        return JSONResponse({ "data" : { 
+                "total_results" : result.count,
+                "retrived_results" : len(result.data),
+                "total_pages" : total_pages
+            },
+            "assignments":result.data
+        })
     except Exception as e:
         return JSONResponse (
             content={"error" : str(e)},
