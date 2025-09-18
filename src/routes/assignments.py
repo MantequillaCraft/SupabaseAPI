@@ -2,13 +2,14 @@ from fastapi import APIRouter, Query, HTTPException, Header, Body
 from fastapi.responses import JSONResponse
 from src.schemas import request_schemas
 from src.utils import general, setup
+from datetime import datetime
 
 router = APIRouter()
 
 
-@router.get("/get_assignment")
+@router.get("/{assignment_id}")
 async def get_assignment(
-    assignment_id:str= Query(...)
+    assignment_id:str
 ):
     try:
         supabase = setup.supabase
@@ -68,28 +69,29 @@ async def get_assignments(
         )
 
 
-@router.get("/add_assignment")
-async def add_assignment(
+@router.post("/create")
+async def create_assignment(
+    req : request_schemas.CreateAssignment,
     auth_token:str = Header(...),
-    assignment_title:str= Query(...)
 ):
     user_data, _ = general.authentication(auth_token=auth_token)
-    code = general.sanitize_string(text=assignment_title)
+    code = general.sanitize_string(text=req.title)
     try:
         supabase = setup.supabase
-        clases = (
+        assignments = (
             supabase.table("assignments")
             .insert({
                 "code" : code,
-                "title" : assignment_title,
-                "created_by" : user_data["id"]
+                "title" : req.title,
+                "created_by" : user_data["id"],
+                "status" : req.status
             })
             .execute()
         )
 
         return JSONResponse({
             "message" : "Assignmente create Succesfully ",
-            "assignment_id" : clases.data[0]["id"]
+            "assignment_id" : assignments.data[0]["id"]
         })
     except Exception as e:
         return JSONResponse (
@@ -98,10 +100,10 @@ async def add_assignment(
         )
 
 
-@router.delete("/delete_assignment")
+@router.delete("/delete/{assignment_id}")
 async def delete_assignment(
-    auth_token:str = Header(...),
-    assignment_id:str= Query(...)
+    assignment_id:str,
+    auth_token:str = Header(...)
 ):
     user_data, _ = general.authentication(auth_token=auth_token)
     try:
@@ -130,6 +132,39 @@ async def delete_assignment(
         
     except Exception as e:
         return JSONResponse (
+            content={"error" : str(e)},
+            status_code=500
+        )
+
+
+@router.put("/edit/{assignment_id}")
+async def edit_assignment(
+    req : request_schemas.UpdateAssignment,
+    assignment_id: str,
+    auth_token: str = Header(...),
+):
+    general.authentication(auth_token=auth_token)
+    code = general.sanitize_string(req.title)
+    try:
+        supabase = setup.supabase
+
+        assignment = (    
+            supabase.table("assignments")
+            .update({
+                "code" : code,
+                "title" : req.title,
+                "status" : req.status,
+                "updated_at" : datetime.now().isoformat()
+            })
+            .eq("id", assignment_id)
+            .execute()
+        )
+        return JSONResponse(content={
+            "message" : "Assignment Updated Succesfully",
+            "data" : assignment.data
+        })
+    except Exception as e:
+        return JSONResponse(
             content={"error" : str(e)},
             status_code=500
         )

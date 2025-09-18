@@ -12,3 +12,12 @@ class AssignmentsFilters(BaseModel):
     createdAtMax : Optional[datetime] = None
     createdAtMin : Optional[datetime] = None
     status : Optional[str] = None
+
+
+class CreateAssignment(BaseModel):
+    title : str = None
+    status : Optional[str] = None
+
+class UpdateAssignment(BaseModel):
+    title : Optional[str] = None
+    status : Optional[str] = None
