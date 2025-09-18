@@ -13,13 +13,13 @@ async def get_assignment(
 ):
     try:
         supabase = setup.supabase
-        clases = (
+        assignments = (
             supabase.table("assignments")
             .select("*")
             .eq("id", assignment_id)
             .execute()
         )
-        return JSONResponse(clases.data[0])
+        return JSONResponse(assignments.data[0])
     except Exception as e:
         return JSONResponse (
             content={"error" : str(e)},
