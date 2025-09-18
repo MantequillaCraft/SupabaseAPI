@@ -74,7 +74,7 @@ async def create_assignment(
     req : request_schemas.CreateAssignment,
     auth_token:str = Header(...),
 ):
-    user_data, _ = general.authentication(auth_token=auth_token)
+    _, user_id = general.authentication(auth_token=auth_token)
     code = general.sanitize_string(text=req.title)
     try:
         supabase = setup.supabase
@@ -83,7 +83,7 @@ async def create_assignment(
             .insert({
                 "code" : code,
                 "title" : req.title,
-                "created_by" : user_data["id"],
+                "created_by" : user_id,
                 "status" : req.status
             })
             .execute()
@@ -105,17 +105,17 @@ async def delete_assignment(
     assignment_id:str,
     auth_token:str = Header(...)
 ):
-    user_data, _ = general.authentication(auth_token=auth_token)
+    user_data, user_id = general.authentication(auth_token=auth_token)
     try:
         supabase = setup.supabase
         a = (
             supabase.table("assignments")
-            .select("title","created_by")
+            .select("*")
             .eq("id", assignment_id)
             .execute()
         )
 
-        if user_data["id"] == a.data[0]["created_by"] or user_data["role"]=="admin":
+        if user_id == a.data[0]["created_by"] or user_data["role"] =="admin":
             response = (
                 supabase.table("assignments")
                 .delete()
@@ -125,11 +125,12 @@ async def delete_assignment(
 
             return JSONResponse({
                 "message" : "Assignmente deleted Succesfully ",
-                "assignment" : a.data[0]["title"]
+                "assignment" : a.data[0]["title"],
+                "assignment_id" : a.data[0]["id"]
             })
         else:
             return HTTPException(status_code=401, detail="Error, you have no permissions")
-        
+
     except Exception as e:
         return JSONResponse (
             content={"error" : str(e)},
@@ -143,26 +144,38 @@ async def edit_assignment(
     assignment_id: str,
     auth_token: str = Header(...),
 ):
-    general.authentication(auth_token=auth_token)
+    user_data, user_id = general.authentication(auth_token=auth_token)
     code = general.sanitize_string(req.title)
     try:
         supabase = setup.supabase
 
-        assignment = (    
+        a = ( 
             supabase.table("assignments")
-            .update({
-                "code" : code,
-                "title" : req.title,
-                "status" : req.status,
-                "updated_at" : datetime.now().isoformat()
-            })
+            .select("*")
             .eq("id", assignment_id)
             .execute()
         )
-        return JSONResponse(content={
-            "message" : "Assignment Updated Succesfully",
-            "data" : assignment.data
-        })
+
+        if user_id == a.data[0]["created_by"] or user_data["role"] == "admin":
+            assignment = (    
+                supabase.table("assignments")
+                .update({
+                    "code" : code,
+                    "title" : req.title,
+                    "status" : req.status,
+                    "updated_at" : datetime.now().isoformat()
+                })
+                .eq("id", assignment_id)
+                .execute()
+            )
+
+            return JSONResponse(content={
+                "message" : "Assignment Updated Succesfully",
+                "data" : assignment.data
+            })
+        else:
+            return HTTPException(status_code=401, detail="Error, you have no permissions")
+
     except Exception as e:
         return JSONResponse(
             content={"error" : str(e)},

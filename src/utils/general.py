@@ -23,7 +23,7 @@ def authentication(auth_token: str):
             .execute()
         )
 
-        return user.data[0], decoded #user.data[0] = data del usuario, decoded = payload decoded
+        return user.data[0], user.data[0]["id"] #user.data[0] = data del usuario, decoded = payload decoded
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Something went wrong: {e}")
 

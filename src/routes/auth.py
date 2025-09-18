@@ -85,8 +85,8 @@ async def acces_token(
 async def decode_token(
     auth_token: str = Header(...)
 ):
-    user_data, decoded  = general.authentication(auth_token=auth_token)
+    user_data, user_id  = general.authentication(auth_token=auth_token)
     return JSONResponse({
-        "payload" : decoded,
-        "user_data" : user_data
+        "user_data" : user_data,
+        "user_id" : user_id,
     })
