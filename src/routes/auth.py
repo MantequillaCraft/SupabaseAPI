@@ -1,8 +1,10 @@
 from fastapi import APIRouter, HTTPException, Header
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 from src.schemas import request_schemas
 from src.utils import setup, general
 from datetime import datetime, timedelta, timezone
+import jwt
 
 
 router = APIRouter()
@@ -44,35 +46,22 @@ async def sign_up( req : request_schemas.SignUpRequest):
 
 @router.get("/get_token")
 async def acces_token(
-    user_id = Header(...)
+    user_email = Header(...),
+    user_password = Header(...)
 ):
     try:
         supabase = setup.supabase
-        response = (
-            supabase.table("users")
-            .select("*")
-            .eq("id", user_id)
-            .execute()
+        user = supabase.auth.sign_in_with_password(
+            {
+                "email" : user_email,
+                "password" : user_password
+            }
         )
 
-        if not response.data:
-            raise HTTPException(status_code=401, detail="User not found")
-
-        user_email =  response.data[0]["email"]
-
-        payload = {
-            "id": user_id,
-            "email" : user_email,
-            "iat": int(datetime.now(timezone.utc).timestamp()),                          # emitido en
-            "nbf": int(datetime.now(timezone.utc).timestamp()),                          # no válido antes de
-            "exp": int((datetime.now(timezone.utc) + timedelta(hours=24)).timestamp()),  # expira en 1h
-        }
-
-        encoder_jwt = general.enconde(payload)
-
-        return JSONResponse({
-            "auth_token" : encoder_jwt,
-            "message" : "token generates succesfully"
+        user_data = dict(user)
+        return JSONResponse(content={
+            "token" : user.session.access_token,
+            "data" : jsonable_encoder(user_data)
         })
 
     except Exception as e:

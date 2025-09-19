@@ -13,17 +13,10 @@ def enconde(payload: dict):
 
 def authentication(auth_token: str):
     try:
-        decoded = jwt.decode(auth_token, key=os.getenv("SECRET"), algorithms=os.getenv("ALGORITHM"))
+        supabase.postgrest.auth(auth_token)
+        user_data = jwt.decode(auth_token, options={"verify_signature": False})
 
-        user = (
-            supabase.table("users")
-            .select("*")
-            .eq("id", decoded["id"])
-            .eq("email", decoded["email"])
-            .execute()
-        )
-
-        return user.data[0], user.data[0]["id"] #user.data[0] = data del usuario, decoded = payload decoded
+        return user_data["email"], user_data["sub"]     #   user_email , user_id
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Something went wrong: {e}")
 

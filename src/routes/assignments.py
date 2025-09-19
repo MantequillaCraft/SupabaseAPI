@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from src.schemas import request_schemas
 from src.utils import general, setup
 from datetime import datetime
+from typing import Optional
 
 router = APIRouter()
 
@@ -105,31 +106,21 @@ async def delete_assignment(
     assignment_id:str,
     auth_token:str = Header(...)
 ):
-    user_data, user_id = general.authentication(auth_token=auth_token)
+    general.authentication(auth_token=auth_token)
     try:
         supabase = setup.supabase
-        a = (
+
+        assignment = (
             supabase.table("assignments")
-            .select("*")
+            .delete()
             .eq("id", assignment_id)
             .execute()
         )
 
-        if user_id == a.data[0]["created_by"] or user_data["role"] =="admin":
-            response = (
-                supabase.table("assignments")
-                .delete()
-                .eq("id", assignment_id)
-                .execute()
-            )
-
-            return JSONResponse({
-                "message" : "Assignmente deleted Succesfully ",
-                "assignment" : a.data[0]["title"],
-                "assignment_id" : a.data[0]["id"]
-            })
-        else:
-            return HTTPException(status_code=401, detail="Error, you have no permissions")
+        return JSONResponse({
+            "message" : "Assignmente deleted Succesfully ",
+            "assignment_id" : auth_token
+        })
 
     except Exception as e:
         return JSONResponse (
@@ -138,43 +129,35 @@ async def delete_assignment(
         )
 
 
-@router.put("/edit/{assignment_id}")
-async def edit_assignment(
+@router.put("/update/{assignment_id}")
+async def update_assignment(
     req : request_schemas.UpdateAssignment,
     assignment_id: str,
     auth_token: str = Header(...),
 ):
-    user_data, user_id = general.authentication(auth_token=auth_token)
+    general.authentication(auth_token=auth_token)
     code = general.sanitize_string(req.title)
     try:
         supabase = setup.supabase
 
-        a = ( 
+        assignment = (
             supabase.table("assignments")
-            .select("*")
+            .update({
+                "code" : code,
+                "title" : req.title,
+                "status" : req.status,
+                "updated_at" : datetime.now().isoformat()
+            })
             .eq("id", assignment_id)
             .execute()
         )
+        if not assignment.data:
+            raise HTTPException(status_code=401, detail="not autorizated")
 
-        if user_id == a.data[0]["created_by"] or user_data["role"] == "admin":
-            assignment = (    
-                supabase.table("assignments")
-                .update({
-                    "code" : code,
-                    "title" : req.title,
-                    "status" : req.status,
-                    "updated_at" : datetime.now().isoformat()
-                })
-                .eq("id", assignment_id)
-                .execute()
-            )
-
-            return JSONResponse(content={
-                "message" : "Assignment Updated Succesfully",
-                "data" : assignment.data
-            })
-        else:
-            return HTTPException(status_code=401, detail="Error, you have no permissions")
+        return JSONResponse(content={
+            "message" : "Assignment Updated Succesfully",
+            "data" : assignment.data
+        })
 
     except Exception as e:
         return JSONResponse(
